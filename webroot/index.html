@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aether Grade - Student Performance Management System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <div class="glow-bg"></div>
+    <div class="glow-bg2"></div>
+
+    <!-- Login Modal -->
+    <div id="authModal" class="modal-overlay">
+        <div class="glass-container modal-box">
+            <div class="box-header">
+                <h2>System Authentication</h2>
+                <p class="subtitle">Secure JWT Authentication & RBAC Login</p>
+            </div>
+            
+            <div id="auth-error-msg" class="alert-banner danger-banner hidden"></div>
+
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" required placeholder="e.g., admin / faculty">
+                </div>
+                <div class="input-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required placeholder="Enter password">
+                </div>
+
+                <div class="form-actions" style="margin-top: 15px;">
+                    <button type="submit" id="btn-login-submit" class="btn primary" style="width: 100%;">Authenticate & Access System</button>
+                </div>
+            </form>
+
+            <div class="divider" style="margin: 20px 0 10px 0;">
+                <span>Quick Demo Accounts</span>
+            </div>
+            
+            <div class="demo-login-badges" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <button type="button" class="btn-xs primary-glow" onclick="fillDemoCredentials('admin', 'admin123')">🔑 Admin (Full CRUD)</button>
+                <button type="button" class="btn-xs secondary-glow" onclick="fillDemoCredentials('faculty', 'faculty123')">👨‍🏫 Faculty (Full CRUD)</button>
+            </div>
+
+            <div class="divider" style="margin: 18px 0 10px 0;">
+                <span>Public Cryptographic Services</span>
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <button type="button" class="btn-xs warning-glow" onclick="openAetherLockVerifierPortalModal()">🌐 Zero-Trust Verifier Portal</button>
+                <button type="button" class="btn-xs secondary-glow" onclick="openPublicVerifierModal()">🛡️ Verify ZKP Token</button>
+                <button type="button" class="btn-xs primary-glow" onclick="openPublicReportCardModal()">🪪 Official Report Card</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="logoGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#a855f7"/>
+                            <stop offset="1" stop-color="#06b6d4"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <div class="header-text">
+                    <h1>AETHER<span>GRADE</span></h1>
+                    <p>Core Java & MySQL Student Performance Engine</p>
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                <div id="user-session-info" style="display: flex; align-items: center; gap: 10px;">
+                    <span id="session-user-badge" class="badge role-badge">Guest</span>
+                    <button id="btn-logout" class="btn-xs secondary-glow hidden">Logout</button>
+                </div>
+                <div class="db-status">
+                    <span class="status-indicator online"></span>
+                    <span>MySQL Connected</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Low Attendance Alert Banner -->
+        <div id="low-attendance-banner" class="alert-banner warning-banner hidden" style="margin: 0 0 20px 0; border: 1px solid rgba(244, 63, 94, 0.4); background: rgba(244, 63, 94, 0.1); color: #fecdd3; padding: 12px 16px; border-radius: 12px; font-weight: 500;"></div>
+
+        <!-- Stats Grid Section -->
+        <section class="stats-grid">
+            <div class="stat-card" id="card-total">
+                <div class="stat-icon purple">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </div>
+                <div class="stat-content">
+                    <p class="stat-label">Total Students</p>
+                    <h3 class="stat-value" id="stat-total-students">-</h3>
+                </div>
+            </div>
+
+            <div class="stat-card" id="card-avg">
+                <div class="stat-icon cyan">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                </div>
+                <div class="stat-content">
+                    <p class="stat-label">Class Average</p>
+                    <h3 class="stat-value" id="stat-class-average">-</h3>
+                </div>
+            </div>
+
+            <div class="stat-card" id="card-pass">
+                <div class="stat-icon green">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                </div>
+                <div class="stat-content">
+                    <p class="stat-label">Pass Rate</p>
+                    <h3 class="stat-value" id="stat-pass-rate">-</h3>
+                </div>
+            </div>
+
+            <div class="stat-card" id="card-attendance">
+                <div class="stat-icon rose">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+                <div class="stat-content">
+                    <p class="stat-label">Low Attendance (<75%)</p>
+                    <h3 class="stat-value" id="stat-low-attendance">-</h3>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Workspace -->
+        <main class="dashboard-body">
+            <!-- Left Side Panel (Controls and Form) -->
+            <div class="control-panel">
+                <!-- Action Form Container -->
+                <div class="glass-container form-box" id="enroll-form-card">
+                    <div class="box-header">
+                        <h2 id="form-title">Enroll New Student</h2>
+                        <p class="subtitle">Enter details to update database records</p>
+                    </div>
+                    <form id="student-form" novalidate>
+                        <div class="input-group">
+                            <label for="studentId">Student ID</label>
+                            <input type="number" id="studentId" name="studentId" required placeholder="e.g., 105">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="name">Full Name</label>
+                            <input type="text" id="name" name="name" required placeholder="e.g., Kishore R">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="department">Department</label>
+                                <select id="department" name="department" required>
+                                    <option value="" disabled selected>Select Dept</option>
+                                    <option value="Cyber Security">Cyber Security</option>
+                                    <option value="CSE">CSE</option>
+                                    <option value="AIML">AIML</option>
+                                    <option value="Information Technology">Information Technology</option>
+                                    <option value="Data Science">Data Science</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label for="attendance">Attendance (%)</label>
+                                <input type="number" id="attendance" name="attendance" step="0.1" required placeholder="0.0 - 100.0">
+                            </div>
+                        </div>
+
+                        <div class="divider">
+                            <span>Subject Marks (0-100)</span>
+                            <button type="button" id="btn-random-marks" class="btn-xs secondary-glow" title="Generate Random Marks for All Subjects">🎲 Randomize Marks</button>
+                        </div>
+
+                        <div class="form-row marks-row">
+                            <div class="input-group">
+                                <label for="javaMarks">Java</label>
+                                <input type="number" id="javaMarks" name="javaMarks" required placeholder="0-100" min="0" max="100">
+                            </div>
+                            <div class="input-group">
+                                <label for="osMarks">OS</label>
+                                <input type="number" id="osMarks" name="osMarks" required placeholder="0-100" min="0" max="100">
+                            </div>
+                            <div class="input-group">
+                                <label for="mathsMarks">Maths</label>
+                                <input type="number" id="mathsMarks" name="mathsMarks" required placeholder="0-100" min="0" max="100">
+                            </div>
+                        </div>
+
+                        <div class="form-row marks-row">
+                            <div class="input-group">
+                                <label for="daaMarks">DAA</label>
+                                <input type="number" id="daaMarks" name="daaMarks" required placeholder="0-100" min="0" max="100">
+                            </div>
+                            <div class="input-group">
+                                <label for="caMarks">CA</label>
+                                <input type="number" id="caMarks" name="caMarks" required placeholder="0-100" min="0" max="100">
+                            </div>
+                            <div class="input-group">
+                                <label for="mlMarks">ML</label>
+                                <input type="number" id="mlMarks" name="mlMarks" required placeholder="0-100" min="0" max="100">
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" id="btn-clear" class="btn secondary">Reset Form</button>
+                            <button type="submit" id="btn-submit" class="btn primary">Enroll Student</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Update Student Marks Container -->
+                <div class="glass-container form-box update-box" id="update-form-card">
+                    <div class="box-header">
+                        <h2>Update Student Marks</h2>
+                        <p class="subtitle">Enter Student ID & edit subject marks in MySQL database</p>
+                    </div>
+                    <form id="update-marks-form" novalidate>
+                        <div class="input-group">
+                            <label for="update-student-id-input">Enter Student ID</label>
+                            <div class="input-with-button">
+                                <input type="number" id="update-student-id-input" name="updateStudentId" required placeholder="Enter Student ID (e.g., 101)" min="1" list="enrolled-students-list">
+                                <datalist id="enrolled-students-list"></datalist>
+                                <button type="button" id="btn-fetch-student" class="btn-xs primary-glow" title="Find Student Details by ID">Find Student</button>
+                            </div>
+                        </div>
+
+                        <div id="update-student-preview" class="student-preview-badge hidden">
+                            <span id="update-preview-name" class="preview-name">-</span>
+                            <span id="update-preview-meta" class="preview-meta">-</span>
+                        </div>
+
+                        <div class="divider">
+                            <span>Subject Marks (0-100)</span>
+                            <button type="button" id="btn-update-random" class="btn-xs secondary-glow" title="Randomize Marks for Selected Student">🎲 Randomize</button>
+                        </div>
+
+                        <div class="form-row marks-row">
+                            <div class="input-group">
+                                <label for="up-javaMarks">Java</label>
+                                <input type="number" id="up-javaMarks" name="up-javaMarks" required placeholder="0-100" min="0" max="100">
+                            </div>
+                            <div class="input-group">
+                                <label for="up-osMarks">OS</label>
+                                <input type="number" id="up-osMarks" name="up-osMarks" required placeholder="0-100" min="0" max="100">
+                            </div>
+                            <div class="input-group">
+                                <label for="up-mathsMarks">Maths</label>
+                                <input type="number" id="up-mathsMarks" name="up-mathsMarks" required placeholder="0-100" min="0" max="100">
+                            </div>
+                        </div>
+
+                        <div class="form-row marks-row">
+                            <div class="input-group">
+                                <label for="up-daaMarks">DAA</label>
+                                <input type="number" id="up-daaMarks" name="up-daaMarks" required placeholder="0-100" min="0" max="100">
+                            </div>
+                            <div class="input-group">
+                                <label for="up-caMarks">CA</label>
+                                <input type="number" id="up-caMarks" name="up-caMarks" required placeholder="0-100" min="0" max="100">
+                            </div>
+                            <div class="input-group">
+                                <label for="up-mlMarks">ML</label>
+                                <input type="number" id="up-mlMarks" name="up-mlMarks" required placeholder="0-100" min="0" max="100">
+                            </div>
+                        </div>
+
+                        <div class="marks-summary-bar">
+                            <div class="summary-item">
+                                <span class="summary-label">Total</span>
+                                <span id="up-total-preview" class="summary-val">0 / 600</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Percentage</span>
+                                <span id="up-percent-preview" class="summary-val">0.0%</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Grade</span>
+                                <span id="up-grade-preview" class="summary-val grade-tag">-</span>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" id="btn-update-clear" class="btn secondary">Clear</button>
+                            <button type="submit" id="btn-update-submit" class="btn warning-btn">Save Marks to SQL</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Async Report Exporter Container -->
+                <div class="glass-container export-box">
+                    <div class="box-header">
+                        <h2>Analytical Report Engine</h2>
+                        <span class="badge concept-badge">Concept: Multi-Threading</span>
+                    </div>
+                    <p class="description">
+                        Launches a background worker thread (`Virtual Threads / Executor`) to asynchronously compile class grades, analyze pass ratios, and export a CSV spreadsheet.
+                    </p>
+                    <div class="report-controls">
+                        <button id="btn-generate-report" class="btn gradient-btn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin-icon"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                            Generate Grade Report
+                        </button>
+                    </div>
+
+                    <!-- Progress Indicator -->
+                    <div class="report-progress-container hidden" id="report-progress-area">
+                        <div class="progress-info">
+                            <span class="status-text" id="report-status-text">Starting background thread...</span>
+                            <span class="percentage" id="report-percentage-text">0%</span>
+                        </div>
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" id="report-progress-bar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="download-container hidden" id="download-area">
+                        <a href="/api/report/download" id="btn-download" class="btn success-btn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                            Download Spreadsheet (.csv)
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side Panel (Grids/Tables) -->
+            <div class="content-panel">
+                <div class="glass-container main-content-box">
+                    <div class="box-header-tabs">
+                        <div class="tabs">
+                            <button class="tab-btn active" data-tab="tab-roster">Student Roster</button>
+                            <button class="tab-btn" data-tab="tab-departments">Department Insights</button>
+                            <button class="tab-btn" data-tab="tab-audit-ledger">🛡️ Audit Ledger & Integrity</button>
+                        </div>
+                        <div class="tab-actions" id="roster-filters">
+                            <button id="btn-quick-seal-roster" class="btn warning-btn" onclick="openAetherLockSealModal()" title="Seal academic term with Merkle Tree root lock" style="padding: 7px 13px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; white-space: nowrap;">
+                                <span>🔒 Lock Term</span>
+                            </button>
+                            <div class="search-wrapper">
+                                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                <input type="text" id="search-input" placeholder="Search by name/ID...">
+                            </div>
+                            <div class="select-wrapper">
+                                <select id="sort-select">
+                                    <option value="id">Sort by: Default (ID)</option>
+                                    <option value="name">Sort by: Name (A-Z)</option>
+                                    <option value="percentage">Sort by: Performance (%)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification Area -->
+                    <div id="alert-banner" class="alert-banner hidden"></div>
+
+                    <!-- Tab: Student Roster -->
+                    <div class="tab-content" id="tab-roster">
+                        <div class="table-scroll-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Student Details</th>
+                                        <th class="mark-col">Java</th>
+                                        <th class="mark-col">OS</th>
+                                        <th class="mark-col">Maths</th>
+                                        <th class="mark-col">DAA</th>
+                                        <th class="mark-col">CA</th>
+                                        <th class="mark-col">ML</th>
+                                        <th>Total</th>
+                                        <th>Avg %</th>
+                                        <th>Grade</th>
+                                        <th>Attendance</th>
+                                        <th>Eligibility</th>
+                                        <th class="actions-col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="student-table-body">
+                                    <!-- Populated dynamically via JS -->
+                                </tbody>
+                            </table>
+                            <div id="no-data" class="no-data hidden">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                <p>No student records found in the database.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Department Insights -->
+                    <div class="tab-content hidden" id="tab-departments">
+                        <div class="department-grid" id="department-grid-container">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Tab: Immutable Audit Ledger -->
+                    <div class="tab-content hidden" id="tab-audit-ledger">
+                        <div class="ledger-header-actions">
+                            <div class="ledger-title-group">
+                                <h3>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="title-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                    Immutable Audit Ledger (SHA-256 Chain)
+                                </h3>
+                                <p>Cryptographically chained MySQL history preventing out-of-band DB tampering</p>
+                            </div>
+                            <div class="ledger-btn-group">
+                                <button id="btn-aetherlock-seal-term" class="btn warning-btn action-btn-icon" onclick="openAetherLockSealModal()" title="Seal academic term with Merkle Tree root lock">
+                                    <span>🔒 AetherLock: Seal Term</span>
+                                </button>
+                                <button id="btn-refresh-ledger" class="btn secondary action-btn-icon" onclick="loadAuditLedger()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                                    <span>Refresh Logs</span>
+                                </button>
+                                <button id="btn-verify-integrity" class="btn gradient-btn action-btn-icon" onclick="verifyLedgerIntegrity()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                    <span>Verify Integrity</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- AetherLock Term Seal Status Card -->
+                        <div id="aetherlock-status-container" class="aetherlock-status-card">
+                            <div class="aetherlock-card-left">
+                                <div class="aetherlock-icon-badge">🔒</div>
+                                <div class="aetherlock-title-text">
+                                    <h4>AetherLock Cryptographic Term Seal <span id="aetherlock-active-term-badge" class="badge role-badge">SPRING-2026</span></h4>
+                                    <p id="aetherlock-status-summary">Checking Merkle root lock status...</p>
+                                </div>
+                            </div>
+                            <div class="aetherlock-card-right" id="aetherlock-card-right-actions">
+                                <span class="seal-pill unlocked" id="aetherlock-pill-status">UNSEALED</span>
+                            </div>
+                        </div>
+
+                        <!-- Integrity Verification Result Banner -->
+                        <div id="integrity-status-banner" class="alert-banner hidden"></div>
+
+                        <!-- Ledger Blocks Chain Table -->
+                        <div class="table-scroll-container">
+                            <table class="data-table ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Block #</th>
+                                        <th>Timestamp</th>
+                                        <th>Actor</th>
+                                        <th>Action</th>
+                                        <th>Target ID</th>
+                                        <th>Data Payload</th>
+                                        <th>Previous Hash</th>
+                                        <th>Current Hash</th>
+                                        <th>Chain Link</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ledger-table-body">
+                                    <!-- Populated dynamically via JS -->
+                                </tbody>
+                            </table>
+                            <div id="ledger-no-data" class="no-data hidden">
+                                <p>No audit ledger entries found in MySQL database.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Public Claim Verifier Modal -->
+    <div id="publicVerifyModal" class="modal-overlay hidden" style="z-index: 20000;">
+        <div class="glass-container modal-box" style="max-width: 550px; position: relative; z-index: 20001;">
+            <button class="modal-close-btn" onclick="closePublicVerifierModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer;">✕</button>
+            <div class="box-header">
+                <h2>🛡️ Public ZKP Claim Verifier</h2>
+                <p class="subtitle">Validate student eligibility & claims without exposing raw marks or PII</p>
+            </div>
+
+            <div class="input-group" style="margin-top: 15px;">
+                <label for="public-token-input">Paste ZKP Verification Token</label>
+                <textarea id="public-token-input" rows="4" style="width: 100%; font-family: monospace; font-size: 0.85rem; padding: 10px; border-radius: 8px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.1); color: #e2e8f0; resize: vertical;" placeholder="Paste token e.g. eyJpc19lbGlnaWJsZV9mb3JfZXhhbSI..."></textarea>
+            </div>
+
+            <div class="form-actions" style="margin-top: 15px;">
+                <button type="button" id="btn-submit-verify-claim" class="btn primary" style="width: 100%;" onclick="submitPublicClaimVerification()">Cryptographically Verify Token</button>
+            </div>
+
+            <div id="verify-claim-result-box" class="hidden" style="margin-top: 20px; padding: 16px; border-radius: 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1);">
+            </div>
+        </div>
+    </div>
+    <!-- Payload Inspector Modal -->
+    <div id="payloadInspectModal" class="modal-overlay hidden" style="z-index: 20000;">
+        <div class="glass-container modal-box" style="max-width: 600px; position: relative; z-index: 20001;">
+            <button class="modal-close-btn" onclick="closePayloadInspectModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer;">✕</button>
+            <div class="box-header">
+                <h2>🔍 Audit Block Data Payload Inspector</h2>
+                <p class="subtitle" id="inspect-modal-subtitle">Full cryptographic transaction payload & parameters</p>
+            </div>
+
+            <div id="inspect-modal-body" style="margin-top: 15px; display: flex; flex-direction: column; gap: 12px;">
+                <!-- Filled dynamically via JS -->
+            </div>
+
+            <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px;">
+                <button type="button" class="btn secondary" style="flex: 1;" onclick="copyRawPayload()">📋 Copy Raw Payload</button>
+                <button type="button" class="btn primary" style="flex: 1;" onclick="closePayloadInspectModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Privacy-Preserving ZKP Token Modal -->
+    <div id="zkpTokenModal" class="modal-overlay hidden" style="z-index: 20000;">
+        <div class="glass-container modal-box" style="max-width: 550px; position: relative; z-index: 20001;">
+            <button class="modal-close-btn" onclick="closeZkpTokenModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer;">✕</button>
+            <div class="box-header">
+                <h2>🛡️ Privacy-Preserving ZKP Token</h2>
+                <p class="subtitle">Cryptographically signed HMAC token verifying eligibility without raw marks or PII</p>
+            </div>
+
+            <div style="display: flex; flex-direction: column; align-items: center; margin: 15px 0;">
+                <div id="zkp-qr-code-container" style="margin-bottom: 12px;"></div>
+                <span style="font-size: 0.75rem; color: #94a3b8;">Cryptographic Assertion Token (HMAC-SHA256)</span>
+            </div>
+
+            <div class="input-group">
+                <label for="zkp-token-text">Encoded Verification Token (Base64URL)</label>
+                <textarea id="zkp-token-text" rows="4" readonly style="width: 100%; font-family: monospace; font-size: 0.8rem; padding: 10px; border-radius: 8px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.1); color: #38bdf8; resize: vertical;"></textarea>
+            </div>
+
+            <div class="form-actions" style="margin-top: 15px; display: flex; gap: 10px;">
+                <button type="button" class="btn secondary" style="flex: 1;" onclick="copyZkpToken()">📋 Copy Token</button>
+                <button type="button" class="btn primary" style="flex: 1;" onclick="downloadZkpToken()">💾 Download .txt</button>
+            </div>
+            
+            <div style="margin-top: 14px; text-align: center;">
+                <button type="button" class="btn-xs secondary-glow" onclick="closeZkpTokenModal(); openPublicVerifierModal();">Verify this Token in Verifier →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Official Report Card / Transcript Modal -->
+    <div id="publicReportCardModal" class="modal-overlay hidden" style="z-index: 30000;">
+        <div class="glass-container modal-box" style="max-width: 860px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; z-index: 30001; padding: 24px;">
+            <button class="modal-close-btn" onclick="closePublicReportCardModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer;">✕</button>
+            <div class="box-header">
+                <h2>🪪 Official Student Performance Transcript</h2>
+                <p class="subtitle">Cryptographically verified academic transcript with complete grade breakdown</p>
+            </div>
+
+            <div class="input-group" style="margin-top: 15px;">
+                <label for="report-card-student-id">Select Student ID</label>
+                <div class="input-with-button">
+                    <input type="number" id="report-card-student-id" placeholder="Enter Student ID (e.g., 101)" min="1">
+                    <button type="button" class="btn-xs primary-glow" onclick="generatePublicStudentReportCard()">Generate Transcript</button>
+                </div>
+            </div>
+
+            <div id="report-card-preview-area" class="hidden" style="margin-top: 20px;">
+            </div>
+        </div>
+    </div>
+
+    <!-- AetherLock Interactive Term Sealing Modal -->
+    <div id="aetherlockSealModal" class="modal-overlay hidden" style="z-index: 35000;">
+        <div class="glass-container modal-box" style="max-width: 680px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; z-index: 35001; padding: 24px;">
+            <button class="modal-close-btn" onclick="closeAetherLockSealModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer;">✕</button>
+            <div class="box-header">
+                <h2>🔒 AetherLock: Time-Locked Term Seal</h2>
+                <p class="subtitle">Compute Merkle Tree root over all student grades and enforce database-level immutability</p>
+            </div>
+
+            <div id="seal-init-controls" style="margin-top: 15px;">
+                <div class="form-row">
+                    <div class="input-group">
+                        <label for="seal-term-input">Academic Term Identifier</label>
+                        <input type="text" id="seal-term-input" value="SPRING-2026" placeholder="e.g., SPRING-2026, FALL-2026">
+                    </div>
+                    <div class="input-group" style="justify-content: flex-end;">
+                        <button type="button" id="btn-execute-term-seal" class="btn warning-btn" style="height: 44px; margin-top: auto;" onclick="executeAetherLockSeal()">
+                            <span>⚡ Execute Term Seal</span>
+                        </button>
+                    </div>
+                </div>
+                <p style="font-size: 0.8rem; color: #cbd5e1; margin-top: 8px;">
+                    ⚠️ <em>Notice: Once cryptographically sealed, all student records for this term become strictly immutable. Database updates and deletions will be permanently blocked.</em>
+                </p>
+            </div>
+
+            <!-- Merkle Tree Real-Time Animated Cascade Area -->
+            <div id="merkle-cascade-area" class="merkle-cascade-wrapper hidden">
+                <div class="cascade-step-indicator">
+                    <span class="step-badge" id="cascade-stage-title">Stage 1: Hashing Student Roster Leaves...</span>
+                    <span class="status-indicator online"></span>
+                </div>
+                <div class="cascade-canvas-area" id="cascade-nodes-display">
+                    <!-- Populated dynamically via animated cascade logic -->
+                </div>
+            </div>
+
+            <!-- Final Term Cryptographically Locked Badge -->
+            <div id="seal-success-badge" class="hidden" style="margin-top: 20px;">
+                <!-- Populated dynamically upon completion -->
+            </div>
+        </div>
+    </div>
+
+    <!-- AetherLock ZK Credential Badge Modal -->
+    <div id="aetherlockZkModal" class="modal-overlay hidden" style="z-index: 35000;">
+        <div class="glass-container modal-box" style="max-width: 580px; width: 95%; position: relative; z-index: 35001; padding: 24px;">
+            <button class="modal-close-btn" onclick="closeAetherLockZkCredentialModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer;">✕</button>
+            <div class="box-header">
+                <h2>🛡️ AetherLock ZK Credential Badge</h2>
+                <p class="subtitle">Cryptographic Zero-Knowledge credential with Merkle membership proof</p>
+            </div>
+
+            <div id="zk-credential-card-container" style="margin-top: 16px;">
+                <!-- Filled dynamically with QR code, claims, and verified badges -->
+            </div>
+
+            <div class="form-actions" style="margin-top: 18px; display: flex; gap: 10px;">
+                <button type="button" class="btn secondary" style="flex: 1;" onclick="copyAetherLockToken()">📋 Copy ZK Token</button>
+                <button type="button" class="btn primary" style="flex: 1;" onclick="downloadAetherLockToken()">💾 Download JSON</button>
+            </div>
+
+            <div style="margin-top: 14px; text-align: center;">
+                <button type="button" class="btn-xs warning-glow" onclick="closeAetherLockZkCredentialModal(); openAetherLockVerifierPortalModal(window.currentAetherLockToken);">
+                    Verify this Credential in Zero-Trust Portal →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AetherLock Zero-Trust External Verifier Portal Modal -->
+    <div id="aetherlockVerifierPortalModal" class="modal-overlay hidden" style="z-index: 40000;">
+        <div class="glass-container modal-box" style="max-width: 650px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; z-index: 40001; padding: 26px;">
+            <button class="modal-close-btn" onclick="closeAetherLockVerifierPortalModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer;">✕</button>
+            <div class="box-header">
+                <h2>🌐 Zero-Trust External Verifier Portal</h2>
+                <p class="subtitle">Verify student credentials & Merkle proofs without requiring database access or exposing raw marks</p>
+            </div>
+
+            <!-- Demo Preset Buttons -->
+            <div style="margin-top: 15px; display: flex; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 0.78rem; color: #94a3b8; align-self: center;">Quick Demo Presets:</span>
+                <button type="button" class="btn-xs primary-glow" onclick="loadDemoAetherProof(101)">✅ Load Student #101 Proof</button>
+                <button type="button" class="btn-xs secondary-glow" onclick="loadDemoAetherProof(103)">✅ Load Student #103 Proof</button>
+                <button type="button" class="btn-xs danger-glow" onclick="loadDemoTamperedAetherProof()" style="background: rgba(244,63,94,0.15); border: 1px solid rgba(244,63,94,0.4); color: #fda4af;">🚨 Load Tampered Proof</button>
+            </div>
+
+            <div class="input-group" style="margin-top: 14px;">
+                <label for="aether-verifier-input">Paste AetherLock ZK Token (JSON or Base64URL)</label>
+                <textarea id="aether-verifier-input" rows="4" style="width: 100%; font-family: monospace; font-size: 0.8rem; padding: 10px; border-radius: 8px; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.1); color: #38bdf8; resize: vertical;" placeholder="Paste credential token..."></textarea>
+            </div>
+
+            <div class="form-actions" style="margin-top: 12px;">
+                <button type="button" id="btn-submit-aether-verify" class="btn gradient-btn" style="width: 100%;" onclick="submitAetherLockVerification()">
+                    <span>🛡️ Execute Zero-Trust Verification</span>
+                </button>
+            </div>
+
+            <!-- Verification Outcome Area -->
+            <div id="aether-verify-result-box" class="hidden" style="margin-top: 20px;">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>
